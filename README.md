@@ -9,7 +9,7 @@ based on the contractual value for active power. The selection of the scale does
 but in case the old mongo data need to be used for forecasting, more investigation needs to be done on ASM's part to figure out what caused the scaling 
 issues and which scale is correct for each smart meter.
 
-3.The dtw.out file needs to be calculated every time new data is brought foe the clustering functions that need precomputed DTW distances 
+3. The dtw.out file needs to be calculated every time new data is brought foe the clustering functions that need precomputed DTW distances 
 (all algorithms that use DTW except kmeans + the distance metric Silhouette Score DTW) to work. That's done by setting the compute_dtw parameter
 in the harmonization step to True.
 
