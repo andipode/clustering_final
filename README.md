@@ -11,5 +11,7 @@ issues and which scale is correct for each smart meter.
 
 3. The dtw.out file needs to be calculated every time new data is brought for the clustering functions that need precomputed DTW distances 
 (all algorithms that use DTW except kmeans + the distance metric Silhouette Score DTW) to work. That's done by setting the compute_dtw parameter
-in the harmonization step to True. Beware that this step is time consuming (can take a few hours).
+in the harmonization step to True. Beware that this step is time consuming (can take a few hours). In case the dtw.out file is not up to date witb 
+the data, running the clustering stage will produce an error, unless the algorithm of choice is kmeans and the calculation of Silhouette Score DTW is 
+skipped (commented out).
 
