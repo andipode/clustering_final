@@ -1,3 +1,5 @@
+# code to run experiments in a big batch
+
 for number in {3..20} 
 do
     mlflow run --experiment-name uc7_clustering --entry-point pipeline.py . -P model="kmeans" -P number_of_clusters=$number --env-manager=local
