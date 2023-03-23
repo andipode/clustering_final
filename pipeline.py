@@ -18,7 +18,6 @@ load_dotenv()
 #os.environ["MLFLOW_TRACKING_URI"] = ConfigParser().('backend','mlflow_tracking_uri')
 os.environ["MLFLOW_TRACKING_URI"] = 'http://131.154.97.48:5000'
 MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
-S3_ENDPOINT_URL = os.environ.get('MLFLOW_S3_ENDPOINT_URL')
 
 @click.command(help="Given a path to an SQL folder with atxt file for every smart meter "
                     "and the smart_meter_description.csv file, it takes data from the SQL folder, runs necessary preproccessing and saves it in "
@@ -32,14 +31,13 @@ S3_ENDPOINT_URL = os.environ.get('MLFLOW_S3_ENDPOINT_URL')
 @click.option("--model", type=str, default="kmeans")
 @click.option("--distance_metric", type=str, default="euclidian")
 @click.option("--number_of_clusters", type=str, default="0")
-@click.option("--season", type=str, default="all")
 @click.option("--ignore-previous-runs",
               type=str,
               default="true",
               help="Whether to ignore previous step runs while running the pipeline")
 
 def workflow(load_new, resolution, smart_meter_description_csv, oldmongo_folder, sql_folder, compute_dtw, model, distance_metric,
-             number_of_clusters, season, ignore_previous_runs):
+             number_of_clusters, ignore_previous_runs):
     ignore_previous_runs = truth_checker(ignore_previous_runs)
     resolution = none_checker(resolution)
     with mlflow.start_run(run_name=(model+' '+distance_metric+' '+number_of_clusters+'_pipeline')) as active_run:
@@ -47,17 +45,17 @@ def workflow(load_new, resolution, smart_meter_description_csv, oldmongo_folder,
         #1. Load New Mongo Data
         load_newmongo_params = {"out_csv": "newmongo.csv"}
         load_newmongo_run = _get_or_run("load_newmongo", load_newmongo_params, git_commit, ignore_previous_runs)
-        newmongo_csv = load_newmongo_run.data.tags['dataset_csv'].replace("s3:/", S3_ENDPOINT_URL)
+        newmongo_csv = load_newmongo_run.data.tags['dataset_csv']#.replace("s3:/", S3_ENDPOINT_URL)
 
         #2a. etl old mongo
         etl_oldmongo_params = {"mongo_folder":oldmongo_folder, "smart_meter_description_csv":smart_meter_description_csv, "resolution":resolution}
         etl_oldmongo_run = _get_or_run("etl_oldmongo", etl_oldmongo_params, git_commit, ignore_previous_runs)
-        clean_oldmongo_csv = etl_oldmongo_run.data.tags['clean_oldmongo_csv'].replace("s3:/", S3_ENDPOINT_URL)
+        clean_oldmongo_csv = etl_oldmongo_run.data.tags['clean_oldmongo_csv']#.replace("s3:/", S3_ENDPOINT_URL)
 
         #2b. etl sql
         etl_sql_params = {"sql_folder":sql_folder, "smart_meter_description_csv":smart_meter_description_csv, "resolution":resolution}
         etl_sql_run = _get_or_run("etl_sql", etl_sql_params, git_commit, ignore_previous_runs)
-        clean_sql_csv = etl_sql_run.data.tags['clean_sql_csv'].replace("s3:/", S3_ENDPOINT_URL)
+        clean_sql_csv = etl_sql_run.data.tags['clean_sql_csv']#.replace("s3:/", S3_ENDPOINT_URL)
 
         #2c. etl new mongo
         with TemporaryDirectory() as temp_dir:
@@ -68,7 +66,7 @@ def workflow(load_new, resolution, smart_meter_description_csv, oldmongo_folder,
             #eprint(newmongo_csv)
             etl_newmongo_params = {"load_new":load_new, "mongo_csv":newmongo_csv, "smart_meter_description_csv":smart_meter_description_csv, "resolution":resolution}
             etl_newmongo_run = _get_or_run("etl_newmongo", etl_newmongo_params, git_commit, ignore_previous_runs)
-            clean_newmongo_csv = etl_newmongo_run.data.tags['clean_newmongo_csv'].replace("s3:/", S3_ENDPOINT_URL)
+            clean_newmongo_csv = etl_newmongo_run.data.tags['clean_newmongo_csv']#.replace("s3:/", S3_ENDPOINT_URL)
 
         #3. Harmonization
         with TemporaryDirectory() as temp_dir:
@@ -79,14 +77,14 @@ def workflow(load_new, resolution, smart_meter_description_csv, oldmongo_folder,
             harmonization_params = {"sql_csv": clean_sql_csv, 'oldmongo_csv': clean_oldmongo_csv, 'newmongo_csv':clean_newmongo_csv,
                                     'out_csv': 'harmonized.csv', 'compute_dtw':compute_dtw}
             harmonization_run = _get_or_run("harmonization", harmonization_params, git_commit, ignore_previous_runs)
-            harmonized_csv = harmonization_run.data.tags['harmonized_csv'].replace("s3:/", S3_ENDPOINT_URL)
+            harmonized_csv = harmonization_run.data.tags['harmonized_csv']#.replace("s3:/", S3_ENDPOINT_URL)
 
         #4. Clustering
         with TemporaryDirectory() as temp_dir:
             #harmonized_csv = download_artifacts(artifact_uri=harmonized_csv, dst_path="/".join([dst_dir, 'harmonized.csv']))
             harmonized_csv = download_artifacts(artifact_uri=harmonized_csv, dst_path=temp_dir)
             clustering_params = {"in_csv": harmonized_csv, 'model': model, 'distance_metric':distance_metric,
-                                'number_of_clusters': number_of_clusters, 'season':season}
+                                'number_of_clusters': number_of_clusters}
             clustering_run = _get_or_run("clustering", clustering_params, git_commit, ignore_previous_runs)
 
             # Log eval metrics to father run for consistency and clear results

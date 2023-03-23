@@ -1,3 +1,19 @@
+"""
+Clusters the data using a configuration provided by the user (model, distance metric and number of clusters), computes
+different validation metrics and also creates graphs for a visual overview of the clusters
+----------
+Parameters:
+in_csv
+    Path to input csv file.
+model
+    The preferred clustering algorithm.
+distance_metric
+    The preferred metric to compute distances between samples.
+number_of_clusters
+
+"""
+
+
 from configparser import ConfigParser
 from operator import index
 from re import A
@@ -39,19 +55,18 @@ os.environ["MLFLOW_TRACKING_URI"] = 'http://131.154.97.48:5000'
 MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
 
 
-@click.command(help="")
+@click.command(help="Clusters the data using a configuration provided by the user (model, distance metric and number of clusters), computes"
+                    "different validation metrics and also creates graphs for a visual overview of the clusters.")
 @click.option("--in_csv", type=str, default="harmonized.csv")
 @click.option("--model", type=str, default="kmeans")
 @click.option("--distance_metric", type=str, default="euclidian")
 @click.option("--number_of_clusters", type=str, default="0")
-@click.option("--season", type=str, default="all")
-def main(in_csv, model, distance_metric, number_of_clusters, season):
+def main(in_csv, model, distance_metric, number_of_clusters):
     in_csv = none_checker(in_csv)
     in_csv = abspath(in_csv)
     distance_metric = none_checker(distance_metric)
     number_of_clusters = none_checker(number_of_clusters)
     number_of_clusters = int(number_of_clusters)
-    season = none_checker(season)
 
     all_data = pd.read_csv(in_csv, index_col=0)
     #all_data = all_data.drop(columns={'index'})
@@ -274,10 +289,10 @@ def graphs(X, all_data, k, cluster_found, cluster_centers):
             j = 0
             i = i + 1
     fig.tight_layout()
-    fig.savefig("results/clusterCenters.png", dpi=80)
-    fig.savefig("results/clusterCentersHighRes.png", dpi=300)
-    mlflow.log_artifact('results/clusterCenters.png')
-    mlflow.log_artifact('results/clusterCentersHighRes.png')
+    fig.savefig("clusterCenters.png", dpi=80)
+    fig.savefig("clusterCentersHighRes.png", dpi=300)
+    mlflow.log_artifact('clusterCenters.png')
+    mlflow.log_artifact('clusterCentersHighRes.png')
     #clear figure:
     fig.clf()
 
@@ -285,8 +300,8 @@ def graphs(X, all_data, k, cluster_found, cluster_centers):
     pie = scaled_data.groupby('cluster').size().plot(kind='pie', autopct='%.0f%%', textprops={'fontsize': 20},
                                   colors=colors)
     fig = pie.get_figure()
-    fig.savefig("results/clusterPie.png", dpi=100)
-    mlflow.log_artifact('results/clusterPie.png')
+    fig.savefig("clusterPie.png", dpi=100)
+    mlflow.log_artifact('clusterPie.png')
 
 def select_k(X):
     silhouette = [-1,-1]
