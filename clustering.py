@@ -97,7 +97,7 @@ def main(in_csv, model, distance_metric, number_of_clusters):
 
 
 def scale(array):
-    # Very important to scale!
+    # This is norm l2 normalization. Also consider minmax scaling
     sc = Normalizer(norm='l2')
     array = sc.fit_transform(array)
     return array
@@ -254,6 +254,7 @@ def metrics(X, labels, centroids):
     ds = np.loadtxt("dtw.out", delimiter=",")
     mlflow.log_metric("DB Index", davies_bouldin_score(X, labels))
     mlflow.log_metric("Silhouette Score", silhouette_score(X, labels))
+    # Comment out next line to avoid dtw.out
     mlflow.log_metric("Silhouette DTW", silhouette_score(X=ds, labels=labels, metric='precomputed'))
     mlflow.log_metric("Peak Match Score", vanilla_peak_match_score(X, labels, centroids))
     mlflow.log_metric("Pr Peak Detection", prominent_peak_detection_score(X, labels, centroids))
@@ -264,7 +265,6 @@ def metrics(X, labels, centroids):
     mlflow.log_metric("Rel Pr P Overdetection", relaxed_peak_overprediction(X, labels, centroids))
 
 
-   
 def graphs(X, all_data, k, cluster_found, cluster_centers):
     scaled_data = pd.DataFrame(X, all_data.index, all_data.columns.tolist().remove('id'))
     scaled_data['cluster'] = pd.Series(cluster_found, name='cluster')
@@ -304,6 +304,7 @@ def graphs(X, all_data, k, cluster_found, cluster_centers):
     mlflow.log_artifact('clusterPie.png')
 
 def select_k(X):
+    # autocompute k based on silhoutte score (not used)
     silhouette = [-1,-1]
     for i in range(3, 30):
         km = KMeans(
@@ -415,7 +416,7 @@ def relaxed_prominent_peak_detection_score(X, labels, centers):
     return(score)
 
 
-def peak_overprediction(X, labels, centers):
+def peak_overprediction(X, labels, centers): # not used
     input_peaks = np.apply_along_axis(im_to_binary_peaks, axis=1, arr=X)
     improved_center_peaks = np.apply_along_axis(im_to_binary_peaks, axis=1, arr=centers)
     
@@ -434,7 +435,7 @@ def peak_overprediction(X, labels, centers):
         score = 0
     return(score)
 
-def relaxed_peak_overprediction(X, labels, centers):
+def relaxed_peak_overprediction(X, labels, centers): # not used
     input_peaks = np.apply_along_axis(im_to_binary_peaks, axis=1, arr=X)
     improved_center_peaks = np.apply_along_axis(im_to_binary_peaks, axis=1, arr=centers)
     relaxed_center_peaks = np.apply_along_axis(max_filter, axis=1, arr=improved_center_peaks)
@@ -457,7 +458,7 @@ def relaxed_peak_overprediction(X, labels, centers):
 
 from itertools import combinations
 from scipy.spatial.distance import hamming
-def distinctiveness_score(X, labels, centers):
+def distinctiveness_score(X, labels, centers): # not used, it is from a paper but didnt make sense
     improved_center_peaks = np.apply_along_axis(im_to_binary_peaks, axis=1, arr=centers)
     relaxed_center_peaks = improved_center_peaks
     l = [*range(0,relaxed_center_peaks.shape[0])]
