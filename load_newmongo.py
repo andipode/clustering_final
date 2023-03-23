@@ -12,12 +12,12 @@ from os.path import abspath
 
 dir_path = os.path.abspath('')
 # get environment variables
-from dotenv import load_dotenv
-load_dotenv()
-# explicitly set MLFLOW_TRACKING_URI as it cannot be set through load_dotenv
-#os.environ["MLFLOW_TRACKING_URI"] = ConfigParser().('backend','mlflow_tracking_uri')
-os.environ["MLFLOW_TRACKING_URI"] = 'http://131.154.97.48:5000'
-MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
+#from dotenv import load_dotenv
+#load_dotenv()
+## explicitly set MLFLOW_TRACKING_URI as it cannot be set through load_dotenv
+##os.environ["MLFLOW_TRACKING_URI"] = ConfigParser().('backend','mlflow_tracking_uri')
+#os.environ["MLFLOW_TRACKING_URI"] = 'http://131.154.97.48:5000'
+#MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
 
 @click.command(help="Downloads data from the ASM's mongo database, converts it to csv format and saves it as an artifact"
                     "--out_csv:localpath+filename to save the csv file")

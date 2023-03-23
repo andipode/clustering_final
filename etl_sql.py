@@ -1,3 +1,17 @@
+"""
+Given a path to an SQL folder with a txt file for every smart meter
+and the smart_meter_description.csv file, it takes data from the SQL folder, runs necessary preproccessing and saves it in
+a single CSV file.
+----------
+Parameters:
+sql_folder
+    Path to folder containing text files with the data for every smart meter (titled ie. BB6100.txt)
+smart_meter_description_csv
+    file with information about each prosumer
+resolution
+    desired dataset sampling period in min
+"""
+
 from configparser import ConfigParser
 import pandas as pd
 import os
@@ -13,16 +27,16 @@ import click
 import mlflow
 
 # get environment variables
-from dotenv import load_dotenv
-load_dotenv()
-# explicitly set MLFLOW_TRACKING_URI as it cannot be set through load_dotenv
-#os.environ["MLFLOW_TRACKING_URI"] = ConfigParser().('backend','mlflow_tracking_uri')
-os.environ["MLFLOW_TRACKING_URI"] = 'http://131.154.97.48:5000'
-MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
+#from dotenv import load_dotenv
+#load_dotenv()
+## explicitly set MLFLOW_TRACKING_URI as it cannot be set through load_dotenv
+##os.environ["MLFLOW_TRACKING_URI"] = ConfigParser().('backend','mlflow_tracking_uri')
+#os.environ["MLFLOW_TRACKING_URI"] = 'http://131.154.97.48:5000'
+#MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
 
 from utils import none_checker, truth_checker
 
-@click.command(help="Given a path to an SQL folder with atxt file for every smart meter "
+@click.command(help="Given a path to an SQL folder with a txt file for every smart meter "
                     "and the smart_meter_description.csv file, it takes data from the SQL folder, runs necessary preproccessing and saves it in "
                     "a single CSV file.")
 @click.option("--sql_folder", type=str, default="sql/")
@@ -192,7 +206,7 @@ def data_preprocessing(all_meter_data, dict, meter_description, resolution):
             one_meter = fill_missing_periods(one_meter, 2, True, resolution)
 
             #now select all days that have no null values after imputation
-            one_meter = only_full_days(one_meter)
+            #one_meter = only_full_days(one_meter)
             
             one_meter = one_meter[['energy']]
             one_meter['date'] = one_meter.index.date

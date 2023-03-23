@@ -2,7 +2,16 @@
 Takes the smart meter csv files from ../mongo/csv, 
 then fixes data scaling issues, replaces missing values and exports only the full days in a final
 csv file, which it saves as an artifact
+----------
+Parameters:
+mongo_folder
+    Path to folder containing another /csv folder with csv files from the mongo database (one file for each smart meter) (ie. BBB6100.csv)
+smart_meter_description_csv
+    file with information about each prosumer
+resolution
+    desired dataset sampling period in min
 """
+
 from configparser import ConfigParser
 import os
 from cmath import nan
@@ -70,7 +79,7 @@ def loadto_df_and_dict(mongo_folder, smart_meter_description_csv):
     Loads all necessary data and places it in data structures
     ----------
     mongo_folder
-        folder containing another /csv folder with JSON files from the mongo database (one file for each smart meter)
+        folder containing another /csv folder with csv files from the mongo database (one file for each smart meter)
 
     smart_meter_description_csv
         file with information about each prosumer

@@ -1,3 +1,20 @@
+"""
+Takes the csv file from the new mongo database and then, if the load_new option is True, 
+rejects outliers, replaces missing values and exports only the full days in a final
+csv file, which it saves as an artifact
+----------
+Parameters:
+load_new
+    Boolean.  If True then preprocessing will commence, otherwise the fpreprocessed file from an older run will be save as an artifact
+    and passed on as a tag
+mongo_csv 
+    Path to the mongo file that was created by load_newmongo
+smart_meter_description_csv
+    file with information about each prosumer
+resolution
+    desired dataset sampling period in min
+"""
+
 from configparser import ConfigParser
 import os
 
@@ -25,10 +42,10 @@ load_dotenv()
 os.environ["MLFLOW_TRACKING_URI"] = 'http://131.154.97.48:5000'
 MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
 
-@click.command(help="Given a path to an SQL folder with atxt file for every smart meter "
-                    "and the smart_meter_description.csv file, it takes data from the SQL folder, runs necessary preproccessing and saves it in "
-                    "a single CSV file.")
-@click.option("--load_new", type=str, default="False")
+@click.command(help="Takes the csv file from the new mongo database and then, if the load_new option is True,"
+                    "rejects outliers, replaces missing values and exports only the full days in a final "
+                    "csv file, which it saves as an artifact.")
+@click.option("--load_new", type=str, default="True")
 @click.option("--mongo_csv", type=str, default="newmongo.csv")
 @click.option("--smart_meter_description_csv", type=str, default="smart_meter_description.csv")
 @click.option("--resolution", type=str, default='60')
@@ -62,41 +79,21 @@ def loadto_df_and_dict(load_new, mongo_csv, smart_meter_description_csv, resolut
 
         all_meter_data = pd.DataFrame()
 
-        raw_data = pd.read_csv(mongo_csv, index_col=[0])
-        negative = raw_data[raw_data['energy_type']=='negative_active']
-        raw_data = raw_data[raw_data['energy_type']=='positive_active']
+        raw_data = pd.read_csv('newmongo.csv', index_col=[0])
+
+        raw_data.drop(columns={'_id', 'Unnamed: 2'}, inplace=True)
+        raw_data = raw_data[raw_data['energy_type']=='active_sum']
 
         for meter in meters:
-            df = raw_data[raw_data['id']==meter[1:]].copy()
-            df = df[df['id']==meter[1:]]
+            df = raw_data[raw_data['id']==meter].copy()
             df = df.drop(columns = {'id', 'energy_type'})
             df = pd.melt(df, id_vars='date', var_name='time', value_name = 'energy')
 
             df.index = pd.to_datetime(df['date'] + ' ' + df['time'], format='%Y-%m-%d %H:%M:%S')
             df = df.drop(columns={'date','time'})
             df = df.sort_index()
-
             df['isnull'] = df['energy']
-            #df['energy'] = df['energy'].fillna(0)
-            
 
-            df2 = negative[negative['id']==meter[1:]].copy()
-            df2 = df2[df2['id']==meter[1:]]
-
-            df2 = df2.drop(columns = {'id', 'energy_type'})
-            df2 = pd.melt(df2, id_vars='date', var_name='time', value_name = 'energy')
-            df2.index = pd.to_datetime(df2['date'] + ' ' + df2['time'], format='%Y-%m-%d %H:%M:%S')
-            df2 = df2.drop(columns={'date','time'})
-            df2 = df2.sort_index()
-
-            df2['isnull'] = df2['energy']
-
-            minus = df2.copy()
-            minus['energy'] = minus['energy'] * -1
-            df2.update(minus)
-
-            
-            
             #resample data in 15 minute intervals
             df = df.resample(str(60)+'min').agg({'energy':np.sum, 'isnull':np.max})
             #create new column to indicate if there was any data during this 1 hour interval
@@ -105,49 +102,13 @@ def loadto_df_and_dict(load_new, mongo_csv, smart_meter_description_csv, resolut
             #creating column with the meter id:  
             df['id'] = meter
             df = df.rename(columns={"index": "timestamp"})
-
-            #resetting the index (not datetime index, so that in the dataframe with all the smart meters every index is unique)
-            #df = df.reset_index()
-            ##df = df.rename(columns={"index": "timestamp"})
-
-            #resample data in 15 minute intervals
-            df2 = df2.resample(str(60)+'min').agg({'energy':np.sum, 'isnull':np.max})
-            #create new column to indicate if there was any data during this 1 hour interval
-            df2['isnull'] = df2['isnull'].isnull()
-            df2.loc[df2['isnull'] == True, 'energy'] = None
-            #creating column with the meter id:  
-            df2['id'] = meter
-
-            #resetting the index (not datetime index, so that in the dataframe with all the smart meters every index is unique)
-            #df2 = df2.reset_index()
-            df2 = df2.rename(columns={"index": "timestamp"})
-
-            #df = df[df['isnull']==False]
-            #df2 = df2[df2['isnull']==False]
-
-            ##df = pd.DataFrame({'energy': pd.concat([df.energy, df2.energy], axis=1).sum(axis=1, skipna=False)})
-            ##df = df.resample(str(60)+'min').agg({'energy':np.sum})
-            df = pd.DataFrame({'energy': pd.concat([df.energy, df2.energy], axis=1).sum(axis=1, min_count=1)})
-            df = df.sort_index()
-            df['isnull'] = df['energy']
-            df['isnull'] = df['isnull'].isnull()
-            df['id'] = meter
-            ##df = df.drop(columns={'null_indicator'})
-            #   
-            df = df.rename(columns={"index": "timestamp"})
-            df['timestamp'] = df.index
-            df['energy'] = df['energy'].fillna(0)
-            
-
-
             all_meter_data = pd.concat([all_meter_data,df])
             ##all_meter_data = all_meter_data.reset_index()
 
-        all_meter_data = all_meter_data.rename(columns={"index": "timestamp"})
-        all_meter_data['timestamp'] = pd.to_datetime(all_meter_data['timestamp'])
-        #all_meter_data = all_meter_data[all_meter_data.timestamp >= '2022-07-01 00:00:00']
-        all_meter_data.reset_index()
-        all_meter_data.to_csv('test.csv')
+        #all_meter_data = all_meter_data.rename(columns={"index": "timestamp"})
+        all_meter_data['timestamp'] = pd.to_datetime(all_meter_data.index)
+        all_meter_data = all_meter_data.reset_index()
+        all_meter_data.drop(columns={'index'}, inplace=True)
 
         #creating a dictionary with a dataframe for each ID:
         IDs = pd.unique(all_meter_data['id'])
@@ -220,23 +181,25 @@ def data_preprocessing(all_meter_data, dict, meter_description, resolution):
     with mlflow.start_run(run_name='etl_newmongo', nested=True) as mlrun:
         #for smart meters BBB6017, BBB6052, that had no data during the night, make energy during the night = 0
         for id in ['BBB6017', 'BBB6052']:
-            meter = dict[id]
-            meter['hour'] = meter.index.hour
-            null_in_the_night = meter[meter['isnull']==True][meter['hour'].isin([0,1,2,3,4,5,6,7,18,19,20,21,22,23])]
-            null_in_the_night['energy'] = 0.0
-            null_in_the_night['isnull'] = False
-            meter.update(null_in_the_night)
-            dict[id] = meter
+            if id in dict.keys():
+                meter = dict[id]
+                meter['hour'] = meter.index.hour
+                null_in_the_night = meter[meter['isnull']==True][meter['hour'].isin([0,1,2,3,4,5,6,7,18,19,20,21,22,23])]
+                null_in_the_night['energy'] = 0.0
+                null_in_the_night['isnull'] = False
+                meter.update(null_in_the_night)
+                dict[id] = meter
 
         #for smart meter BBB6100, for which we had no data during the day when there was more generation than production
         #make energy during those periods = 0
-        meter = dict['BBB6100']
-        meter['hour'] = meter.index.hour
-        null_generation = meter[meter['isnull']==True][meter['hour'].isin([6,7,8,9,10,11,12,13,14,15,16,17,18,19])]
-        null_generation['energy'] = 0.0
-        null_generation['isnull'] = False
-        meter.update(null_generation)
-        dict['BBB6100'] = meter
+        if 'BBB6100' in dict.keys():
+            meter = dict['BBB6100']
+            meter['hour'] = meter.index.hour
+            null_generation = meter[meter['isnull']==True][meter['hour'].isin([6,7,8,9,10,11,12,13,14,15,16,17,18,19])]
+            null_generation['energy'] = 0.0
+            null_generation['isnull'] = False
+            meter.update(null_generation)
+            dict['BBB6100'] = meter
 
 
         IDs = pd.unique(all_meter_data['id'])

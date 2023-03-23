@@ -1,3 +1,23 @@
+"""
+Combines three csvs produced by etl_oldmongo, etl_newmongo and etl_sql into one, after checking that the resolution is the same for all of
+them. Also, if the compute_dtw parameter is set to True, it computes the constrained DTW distances between all samples in the database and
+saves the resulting matrix in a single file (dtw.out)
+----------
+Parameters:
+sql_csv
+    Path to the csv produced by etl_sql.py
+oldmongo_csv
+    Path to the csv produced by etl_oldmongo.py
+newmongo_csv
+    Path to the csv produced by etl_newmongo.py
+out_csv
+    desired name for the output csv
+compute_dtw
+    Boolean. If True the code will compute the constrained DTW distances for all samples in the dataset and save it in the dtw.out file
+    This can take a long time (a few hours)
+"""
+
+
 from configparser import ConfigParser
 import pandas as pd
 import os
