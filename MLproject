@@ -45,5 +45,4 @@ entry_points:
             model: {type: str, default: kmeans}
             distance_metric: {type: str, default: euclidean}
             number_of_clusters: {type: str, default: 10}
-            season: {type: str, default: all}
-        command: python clustering.py --in_csv {in_csv} --model {model} --distance_metric {distance_metric} --number_of_clusters {number_of_clusters} --season {season}
+        command: python clustering.py --in_csv {in_csv} --model {model} --distance_metric {distance_metric} --number_of_clusters {number_of_clusters}
