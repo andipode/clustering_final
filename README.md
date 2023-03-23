@@ -3,6 +3,9 @@ data preprocessing, harmonization, clustering and validation.
 New data are collected from a Mongo database (through load_newmongo.py) and there is also historical data that's used for the analysis (collected
 and processed by etl_oldmongo.py and etl_sql.py).
 
+The data inside the /oldmongo and /sql folders are incomplete because the files were too large to upload on github. A sample file is included in each
+folder to demonstrate how the files should be titled and structured.
+
 
 # Pipeline example
 ```mlflow run --experiment-name uc7_clustering --entry-point pipeline.py . -P model="kmeans" -P number_of_clusters=12 --env-manager=local```
