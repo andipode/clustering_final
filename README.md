@@ -6,6 +6,7 @@ and processed by etl_oldmongo.py and etl_sql.py).
 The data inside the /oldmongo and /sql folders are incomplete because the files were too large to upload on github. A sample file is included in each
 folder to demonstrate how the files should be titled and structured.
 
+The results.ipynb file contains an example analysis of the results of a clustering configuration.
 
 # Pipeline example
 ```mlflow run --experiment-name uc7_clustering --entry-point pipeline.py . -P model="kmeans" -P number_of_clusters=12 --env-manager=local```
