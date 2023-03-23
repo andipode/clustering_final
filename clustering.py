@@ -58,7 +58,7 @@ MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
 @click.command(help="Clusters the data using a configuration provided by the user (model, distance metric and number of clusters), computes"
                     "different validation metrics and also creates graphs for a visual overview of the clusters.")
 @click.option("--in_csv", type=str, default="harmonized.csv")
-@click.option("--model", type=click.Choice(['kmeans', 'kmedoids', 'hierarchical']), default="kmeans", multiple=False)
+@click.option("--model", type=click.Choice(['kmeans', 'kmedoids', 'agglomerative']), default="kmeans", multiple=False)
 @click.option("--distance_metric", type=click.Choice(['euclidean', 'dtw']), default="euclidean", multiple=False)
 @click.option("--number_of_clusters", type=str, default="0")
 def main(in_csv, model, distance_metric, number_of_clusters):
