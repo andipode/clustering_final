@@ -38,8 +38,8 @@ from dotenv import load_dotenv
 load_dotenv()
 # explicitly set MLFLOW_TRACKING_URI as it cannot be set through load_dotenv
 #os.environ["MLFLOW_TRACKING_URI"] = ConfigParser().('backend','mlflow_tracking_uri')
-os.environ["MLFLOW_TRACKING_URI"] = 'http://131.154.97.48:5000'
-MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
+#os.environ["MLFLOW_TRACKING_URI"] = 'http://131.154.97.48:5000'
+#MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
 
 @click.command(help="Given a path to an SQL folder with atxt file for every smart meter "
                     "and the smart_meter_description.csv file, it takes data from the SQL folder, runs necessary preproccessing and saves it in "
@@ -53,9 +53,10 @@ MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI")
 def main(sql_csv, oldmongo_csv, newmongo_csv, out_csv, compute_dtw):
     with mlflow.start_run(run_name='harmonization', nested=True) as mlrun:
         df = join_and_export(sql_csv, oldmongo_csv, newmongo_csv, out_csv, mlrun)
-        X = df_to_array(df)
-        X = scale(X)
-        dtw_matrix(compute_dtw, X)
+        if(compute_dtw == True):
+            X = df_to_array(df)
+            X = scale(X)
+            dtw_matrix(compute_dtw, X)
 
 def scale(array):
     # Very important to scale!
@@ -79,34 +80,33 @@ def join_and_export(sql_csv, oldmongo_csv, newmongo_csv, out_csv, mlrun):
     oldmongo_csv = abspath(oldmongo_csv)
     newmongo_csv = abspath(newmongo_csv)
 
-
-    df1 = pd.read_csv(sql_csv, index_col=0)
-    df2 = pd.read_csv(oldmongo_csv, index_col=0)
+    df1 = pd.read_csv(oldmongo_csv, index_col=0)
+    df2 = pd.read_csv(sql_csv, index_col=0)
     df3 = pd.read_csv(newmongo_csv, index_col=0)
 
     if (not same_resolution(df1, df2, df3)):
         sys.exit("Error: The three csvs don't have the same resolution")
 
     df1 = df1[df1['id'] != 'BBB6179']
-    df1 =df1[df1['id'] != 'BBB6169']
+    df1 = df1[df1['id'] != 'BBB6169']
 
     all_data = pd.concat([df1,df2,df3])
     all_data.dropna(axis=0, inplace=True)
     all_data = all_data.reset_index()
-
-    all_data.to_csv('harmonized.csv')
+    
+    all_data = all_data.drop(columns='index')
+    all_data.to_csv(path_or_buf='harmonized.csv')
     mlflow.log_artifact(dir_path+'/harmonized.csv', "harmonized")
     mlflow.set_tag('harmonized_csv', f'{mlrun.info.artifact_uri}/harmonized/harmonized.csv')
     return(all_data)
 
 def df_to_array(df):
     X = df.copy()
-    X = X.drop(columns=['id', 'date', 'index'])
+    X = X.drop(columns=['id', 'date'])
     X = X.values.copy()
     return(X)
 
 def dtw_matrix(compute_dtw, X):
-
     compute_dtw = truth_checker(compute_dtw)
     if(compute_dtw):
         ds = dtw.distance_matrix(X, window=2)
