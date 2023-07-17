@@ -88,7 +88,6 @@ def loadto_df_and_dict(sql_folder, smart_meter_description_csv, resolution):
 
         #resetting the index (not datetime index, so that in the dataframe with all the smart meters every index is unique)
         df = df.reset_index()
-        df['energy'].fillna(0)
 
         all_meter_data = pd.concat([all_meter_data,df])
 
@@ -108,15 +107,6 @@ def loadto_df_and_dict(sql_folder, smart_meter_description_csv, resolution):
         dict[id] = df
 
     return(all_meter_data, dict, meter_description)
-
-#code to format titles for the graphs to contain info on consumption, generation, use
-def id_title(id, description):
-    title = id + "(C,"
-    if(not np.isnan(description.loc[id]['Production (kW)']) and description.loc[id]['Production (kW)']>0.0): title = title + "P,"
-     
-    title = title + str(description.loc[id]['Type'])
-
-    return(title + ")")
 
 
 def reject_outliers(meter_data, contractual_power, contractual_production, resolution):
@@ -178,8 +168,8 @@ def data_preprocessing(all_meter_data, dict, meter_description, resolution):
             meter.update(null_in_the_night)
             dict[id] = meter
 
-        #for smart meter BBB6100, for which we had no data during the day when there was more generation than production
-        #make energy during those periods = 0
+            #for smart meter BBB6100, for which we had no data during the day when there was more generation than production
+            #make energy during those periods = 0
         meter = dict['BBB6100']
         meter['hour'] = meter.index.hour
         null_generation = meter[meter['isnull']==True][meter['hour'].isin([6,7,8,9,10,11,12,13,14,15,16,17,18,19])]
@@ -197,17 +187,17 @@ def data_preprocessing(all_meter_data, dict, meter_description, resolution):
             one_meter.loc[one_meter['isnull']==True, 'energy'] = np.nan
             one_meter['consecutive_null'] = one_meter['energy'].isnull().astype(int).groupby(one_meter['energy'].notnull().astype(int).cumsum()).cumsum()
 
-            #dealing with outliers:
+                #dealing with outliers:
             power = meter_description.loc[id]['Contractual power (kW)']  
             production = meter_description.loc[id]['Production (kW)']
             one_meter = reject_outliers(one_meter, power, production, resolution)
 
-            #filling missing periods:
+                #filling missing periods:
             one_meter = fill_missing_periods(one_meter, 2, True, resolution)
 
-            #now select all days that have no null values after imputation
-            #one_meter = only_full_days(one_meter)
-            
+                #now select all days that have no null values after imputation
+            one_meter = only_full_days(one_meter)
+                
             one_meter = one_meter[['energy']]
             one_meter['date'] = one_meter.index.date
             one_meter['time'] = one_meter.index.time
@@ -217,8 +207,11 @@ def data_preprocessing(all_meter_data, dict, meter_description, resolution):
             to_export = pd.concat([to_export,one_meter])
 
         to_export = to_export.reset_index()
-        #exporting to CSV:
+            #exporting to CSV:
         to_export.to_csv('clean_sql.csv')
+
+        #to_export.dropna(axis=0, inplace=True)
+        #to_export.to_csv('test')
         mlflow.log_artifact(dir_path+'/clean_sql.csv', "clean_sql")
         mlflow.set_tag('clean_sql_csv', f'{mlrun.info.artifact_uri}/clean_sql/clean_sql.csv')
 
