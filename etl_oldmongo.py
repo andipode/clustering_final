@@ -15,15 +15,12 @@ resolution
 from configparser import ConfigParser
 import os
 from cmath import nan
-
 import pandas as pd
-
 from os.path import abspath
 dir_path = os.path.abspath('')
 import json
 import math
 import warnings
-
 import click
 import matplotlib
 import matplotlib.pyplot as plt
@@ -116,7 +113,6 @@ def loadto_df_and_dict(mongo_folder, smart_meter_description_csv):
     all_meter_data = all_meter_data[all_meter_data.timestamp.dt.year != 1970]
     all_meter_data = all_meter_data[all_meter_data.timestamp.dt.year != 2040]
     all_meter_data = all_meter_data.reset_index()
-    all_meter_data.to_csv('test.csv')
 
     #creating a dictionary with a dataframe for each ID:
     IDs = pd.unique(all_meter_data['id'])
@@ -377,15 +373,16 @@ def data_preprocessing(all_meter_data, dict, meter_description, resolution):
     """
     resolution = none_checker(resolution)
     resolution = int(resolution)
-    with mlflow.start_run(run_name='etl_oldmongo', nested=True) as mlrun:
+    with mlflow.start_run(run_name='etl_oldmongo', nested=False) as mlrun:
         fix_scaling(dict)
+
         #resample:
         IDs = pd.unique(all_meter_data['id'])
         for id in IDs:
             one_meter = dict[id].copy()
             one_meter = one_meter.resample(str(resolution)+'min').agg({'Active_Energy_+_Total_end':np.max, 'Active_Energy_-_Total_end':np.max})
             dict[id] = one_meter
-        
+            
         to_export = pd.DataFrame()
         for id in IDs:
             one_meter = dict[id].copy()
@@ -393,11 +390,11 @@ def data_preprocessing(all_meter_data, dict, meter_description, resolution):
             one_meter['consecutive_null'] = one_meter['Active_Energy_+_Total_end'].isnull().astype(int).groupby(one_meter['Active_Energy_+_Total_end'].notnull().astype(int).cumsum()).cumsum()
 
 
-            #filling missing periods:
+                #filling missing periods:
             one_meter = fill_missing_periods(one_meter, 2, True, id, meter_description, resolution)
 
             #now select all days that have no null values after imputation
-            #one_meter = only_full_days(one_meter)
+            one_meter = only_full_days(one_meter)
 
             one_meter = one_meter[['energy']]
             one_meter['date'] = one_meter.index.date
